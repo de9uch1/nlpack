@@ -147,8 +147,9 @@ class Normalizer:
 
 # fmt: off
 @cli.subcommand("normalizer")
-@cli.option("--type", "-t", "type", multiple=True, metavar="TYPE", default=["space"],
-            choice=["space", "nfkc", "z2h", "lower", "upper"])
+@cli.option("--type", "-t", "type", multiple=True, default=["space"],
+            choice=["space", "nfkc", "z2h", "lower", "upper"],
+            help="Normalization type")
 # fmt: on
 def normalizer(type):
     """Text normalizer
