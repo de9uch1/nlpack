@@ -110,6 +110,10 @@ def print_no_crop(*args, **kwargs):
     console = Console(width=sys.maxsize)
     console.print(*args, **kwargs)
 
+def print_table(*args, **kwargs):
+    console = Console()
+    console.print(*args, **kwargs)
+
 
 def option_num_workers(short_option: Optional[str] = None):
     argument_strs = ["--num-workers"]

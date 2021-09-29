@@ -6,3 +6,4 @@
 
 from .alignments import show_aligns
 from .corpus_stats import corpus_stats
+from .compare_sysouts import compare_sysouts
