@@ -52,17 +52,17 @@ class SentenceWiseScorer:
         tokenize: str = "v13a",
     ):
         if metric == "bleu":
-            self.scorer = BLEU(
+            return BLEU(
                 lowercase=lowercase,
                 tokenize=tokenize,
                 effective_order=True,
             )
         elif metric == "ter":
-            self.scorer = TER(
+            return TER(
                 case_sensitive=not lowercase,
             )
         elif metric == "chrf":
-            self.scorer = CHRF(
+            return CHRF(
                 lowercase=lowercase,
             )
         else:
