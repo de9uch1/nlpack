@@ -8,13 +8,17 @@ import unicodedata
 from typing import List
 
 import numpy as np
-
 from nlpack import cli
+
+HALFWIDTH_CHARS = {"▁"}
 
 
 def str_width(string: str):
     return sum(
-        2 if unicodedata.east_asian_width(char) in "FWA" else 1 for char in string
+        2
+        if unicodedata.east_asian_width(char) in "FWA" and char not in HALFWIDTH_CHARS
+        else 1
+        for char in string
     )
 
 
