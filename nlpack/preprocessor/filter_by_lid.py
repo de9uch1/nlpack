@@ -37,20 +37,27 @@ def filter_by_lid(
     """
     Filters by language identificaion.
     """
+    assert len(langs) == len(suffixes)
+
     fasttext_cache_dir = cache_dir("fasttext")
     lid_model_path = os.path.join(fasttext_cache_dir, LID_FILENAME)
-
     if not os.path.exists(lid_model_path):
         os.makedirs(fasttext_cache_dir, exist_ok=True)
+        cli.echo(
+            "Download the language identification model from {} to {}".format(
+                LID_URL, lid_model_path
+            ),
+            err=True,
+        )
         urllib.request.urlretrieve(LID_URL, lid_model_path)
+        cli.echo("Done", err=True)
     assert os.path.exists(lid_model_path)
+    lid_model = load_model(lid_model_path)
 
     input_files = [open(input_prefix + "." + suffix, mode="r") for suffix in suffixes]
     output_files = [open(output_prefix + "." + suffix, mode="w") for suffix in suffixes]
 
     lang_labels = ["__label__" + lang if lang != "__" else None for lang in langs]
-    assert len(lang_labels) == len(suffixes)
-    lid_model = load_model(lid_model_path)
 
     num_keep, total_lines = 0, 0
     for each_line in zip(*input_files):
@@ -65,6 +72,11 @@ def filter_by_lid(
             for f, line in zip(output_files, each_line):
                 f.write(line)
             num_keep += 1
+
+    for f in input_files:
+        f.close()
+    for f in output_files:
+        f.close()
 
     cli.echo(
         "input sentences: {:,}, output sentences: {:,}".format(total_lines, num_keep),
