@@ -7,6 +7,7 @@
 from typing import List
 
 import numpy as np
+
 from nlpack import cli
 
 

@@ -10,12 +10,13 @@ from argparse import ArgumentParser, Namespace
 from typing import List, Optional
 
 import numpy as np
-from nlpack import cli, utils
-from nlpack.utils import SentenceBatch
 from rich.console import Console
 from sacrebleu.dataset import DATASETS
 from sacrebleu.metrics import BLEU, CHRF, TER
 from sacrebleu.utils import get_reference_files, smart_open
+
+from nlpack import cli, utils
+from nlpack.utils import SentenceBatch
 
 
 class SentenceWiseScorer:

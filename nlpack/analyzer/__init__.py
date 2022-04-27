@@ -5,5 +5,5 @@
 # LICENSE file in the root directory of this source tree.
 
 from .alignments import show_aligns
-from .corpus_stats import corpus_stats
 from .compare_sysouts import compare_sysouts
+from .corpus_stats import corpus_stats
