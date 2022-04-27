@@ -124,8 +124,8 @@ def corpus_stats(input: str, histogram_width: int, buffer_size: int, num_workers
 
     num_tokens_mean = stats.num_tokens / stats.num_sentences
     num_tokens_var = (
-        stats.sqrd_num_tokens - num_tokens_mean ** 2
-    ) / stats.num_sentences
+        stats.sqrd_num_tokens / stats.num_sentences
+    ) - num_tokens_mean ** 2
     num_tokens_sd = num_tokens_var ** 0.5
 
     stats_table_title = "Statistics of {}".format(
@@ -168,9 +168,9 @@ def corpus_stats(input: str, histogram_width: int, buffer_size: int, num_workers
 
     num_sentences = stats.num_sentences
     histogram = stats.histogram
-    for i in range(len(histogram)):
-        start = i * histogram_width if i > 0 else stats.min_len
-        end = (i + 1) * histogram_width - 1 if i < len(histogram) - 1 else stats.max_len
+    for i in range(max(histogram) + 1):
+        start = i * histogram_width
+        end = (i + 1) * histogram_width - 1 if i < max(histogram) else stats.max_len
         count = histogram[i]
         percentage = (count / num_sentences) * 100
         bar = cli.Bar(size=100, begin=0, end=percentage, width=30)
