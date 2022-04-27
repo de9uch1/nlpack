@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import sys
-from typing import Any, Dict, List, Optional
+from typing import List
 
 from nlpack import cli, utils
 from nlpack.normalizer import Normalizer
@@ -46,8 +46,12 @@ class Tokenizer:
 @cli.subcommand("tokenizer")
 @cli.option("--type", "-t", "type", metavar="TYPE", default="space",
             choice=["space", "moses"])
+@cli.option("--lang", "-l", metavar="LANG", default="en",
+            help="Language (ISO 639-1)")
+@cli.option("--aggresive-hyphen-split", "-a", is_flag=True,
+            help="Aggresive hyphen spliting for moses tokenzier.")
 # fmt: on
-def tokenize(type):
+def tokenize(type: str, lang: str, aggresive_hyphen_split: bool):
     """Text tokenizer
 
     Text is read from standard input.
@@ -57,7 +61,7 @@ def tokenize(type):
     Args:
         type: (str): Tokenizer type.
     """
-    tokenizer = Tokenizer(type)
+    tokenizer = Tokenizer(type, lang=lang, hyphen_split=aggresive_hyphen_split)
     for lines in utils.buffer_lines(sys.stdin):
         lines = tokenizer(lines.lines)
         print("\n".join(lines))
