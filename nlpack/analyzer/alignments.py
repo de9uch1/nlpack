@@ -4,23 +4,16 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import unicodedata
 from typing import List
 
 import numpy as np
+import wcwidth
 
 from nlpack import cli
 
-HALFWIDTH_CHARS = {"▁"}
 
-
-def str_width(string: str):
-    return sum(
-        2
-        if unicodedata.east_asian_width(char) in "FWA" and char not in HALFWIDTH_CHARS
-        else 1
-        for char in string
-    )
+def str_width(string: str) -> int:
+    return wcwidth.wcswidth(string)
 
 
 def make_hard_matrix(matrix: np.ndarray):
@@ -39,7 +32,8 @@ def format_matrix(
     out_str = ""
 
     # Get the begin point of columns.
-    start_col = max(str_width(label) for label in row_labels) + 1
+    row_widths = [str_width(label) for label in row_labels]
+    start_col = max(row_widths) + 1
 
     # Pad each column label.
     col_len = max(map(len, column_labels))
@@ -57,7 +51,7 @@ def format_matrix(
 
     # Pad each row label.
     padded_row_labels = [
-        " " * (start_col - str_width(label) - 1) + label for label in row_labels
+        " " * (start_col - width - 1) + label for label, width in zip(row_labels, row_widths)
     ]
 
     # Show the each row
@@ -91,19 +85,10 @@ def show_aligns_one(
     src_str = ("[cyan]" if transpose else "[green]") + src_line + "[/]"
     tgt_str = ("[green]" if transpose else "[cyan]") + tgt_line + "[/]"
 
-    table = cli.Table(
-        title=f"Sentence-{sent_id}",
-        title_justify="left",
-        show_header=False,
-        box=cli.HORIZONTALS,
-    )
-    table.add_column(justify="right")
-    table.add_column(justify="left")
-    table.add_row("src", src_str)
-    table.add_row("tgt", tgt_str)
-    table.add_row("align", "\n" + matrix_str)
-
-    cli.print_no_crop(table)
+    cli.print_box(f"Sentence-{sent_id}")
+    cli.rprint(f"S-{sent_id}\t{src_str}")
+    cli.rprint(f"T-{sent_id}\t{tgt_str}")
+    cli.rprint(f"A-{sent_id}\t\n{matrix_str}\n")
 
 
 # fmt: off

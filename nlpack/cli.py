@@ -4,16 +4,17 @@
 # LICENSE file in the root directory of this source tree.
 
 import sys
-from typing import Optional
+from typing import IO, Any, Optional
 
 import click
 from click import File, confirm, pass_context, style
 from click_help_colors import HelpColorsCommand, HelpColorsGroup
-from rich import print as rprint
+import rich
 from rich.bar import Bar
 from rich.box import HORIZONTALS, ROUNDED, SQUARE
 from rich.console import Console
 from rich.table import Table
+from rich.theme import Theme
 
 from nlpack import __version__
 
@@ -104,6 +105,28 @@ def print_box(s: str):
     _box = Table(box=ROUNDED, show_header=False)
     _box.add_row(s)
     rprint(_box)
+
+
+def rprint(
+    *objects: Any,
+    sep: str = " ",
+    end: str = "\n",
+    file: Optional[IO[str]] = None,
+    flush: bool = False,
+) -> None:
+    r"""Print object(s) supplied via positional arguments.
+    This function has an identical signature to the built-in print.
+    For more advanced features, see the :class:`~rich.console.Console` class.
+
+    Args:
+        sep (str, optional): Separator between printed objects. Defaults to " ".
+        end (str, optional): Character to write at end of output. Defaults to "\\n".
+        file (IO[str], optional): File to write to, or None for stdout. Defaults to None.
+        flush (bool, optional): Has no effect as Rich always flushes output. Defaults to False.
+
+    """
+    write_console = Console(theme=Theme(inherit=False)) if file is None else Console(file=file)
+    return write_console.print(*objects, sep=sep, end=end)
 
 
 def print_no_crop(*args, **kwargs):
