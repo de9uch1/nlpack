@@ -45,7 +45,7 @@ def format_matrix(
     for column_labels_row in zip(*padded_column_labels):
         out_str += " " * start_col
         for char in column_labels_row:
-            out_str += f"[green]{char}[/]"
+            out_str += cli.style(char, fg="green")
             out_str += " " * (3 - str_width(char))
         out_str += "\n"
 
@@ -57,7 +57,7 @@ def format_matrix(
     # Show the each row
     matrix_lines = make_hard_matrix(matrix)
     rows_str = "\n".join(
-        f"[cyan]{label}[/] {row}" for label, row in zip(padded_row_labels, matrix_lines)
+        cli.style(label, fg="cyan") + " " + row for label, row in zip(padded_row_labels, matrix_lines)
     )
     out_str += rows_str
     return out_str
@@ -82,13 +82,10 @@ def show_aligns_one(
         else format_matrix(align_matrix, tgt_tokens, src_tokens)
     )
 
-    src_str = ("[cyan]" if transpose else "[green]") + src_line + "[/]"
-    tgt_str = ("[green]" if transpose else "[cyan]") + tgt_line + "[/]"
-
-    cli.print_box(f"Sentence-{sent_id}")
-    cli.rprint(f"S-{sent_id}\t{src_str}")
-    cli.rprint(f"T-{sent_id}\t{tgt_str}")
-    cli.rprint(f"A-{sent_id}\t\n{matrix_str}\n")
+    cli.echo(f"Sentence-{sent_id}:")
+    cli.echo(f"S-{sent_id}\t" + cli.style(src_line, fg="cyan" if transpose else "green"))
+    cli.echo(f"T-{sent_id}\t" + cli.style(tgt_line, fg="green" if transpose else "cyan"))
+    cli.echo(f"A-{sent_id}\t\n{matrix_str}\n")
 
 
 # fmt: off
