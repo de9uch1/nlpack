@@ -34,7 +34,7 @@ class Tokenizer:
         return self.tokenizer([line])[0]
 
     def space(self, lines: List[str]):
-        return [Normalizer.space(line).split(" ") for line in lines]
+        return [Normalizer.space(line).split() for line in lines]
 
     def moses(self, lines: List[str]):
         return self.moses_tokenizer.tokenize(
