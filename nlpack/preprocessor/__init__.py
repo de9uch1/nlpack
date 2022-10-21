@@ -7,3 +7,4 @@
 from .clean_parallel_corpus import clean_parallel_corpus
 from .filter_by_lid import filter_by_lid
 from .sampling_corpus import sampling_corpus
+from .dedup import dedup
