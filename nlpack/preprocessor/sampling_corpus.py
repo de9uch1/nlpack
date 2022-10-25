@@ -37,7 +37,8 @@ def sampling_corpus(
         num_sentences = len(f_in.readlines())
 
     np.random.seed(seed)
-    sampler = np.random.permutation(num_sentences)[:sampling_size]
+    size = min(sampling_size, num_sentences)
+    sampler = np.random.permutation(num_sentences)[:size]
     for suffix in suffixes:
         with open(input_prefix + "." + suffix, mode="r") as f_in:
             with open(output_prefix + "." + suffix, mode="w") as f_out:
