@@ -6,7 +6,7 @@
 
 import shutil
 import subprocess
-from typing import Dict, List
+from typing import Dict, List, Set
 
 import numpy as np
 
@@ -55,10 +55,12 @@ def sampling_corpus(
     sample_ids = np.random.permutation(num_sentences)[:size].tolist()
     for suffix in suffixes:
         samples: Dict[int, str] = dict.fromkeys(sample_ids)
+        unseen: Set[int] = set(sample_ids)
         with open(input_prefix + "." + suffix, mode="r") as f_in:
             for i, line in enumerate(f_in):
-                if i in samples:
+                if i in unseen:
                     samples[i] = line
+                    unseen.remove(i)
         with open(output_prefix + "." + suffix, mode="w") as f_out:
             f_out.writelines(samples.values())
 
