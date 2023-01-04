@@ -4,11 +4,25 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import List
+import shutil
+import subprocess
+from typing import Dict, List
 
 import numpy as np
 
 from nlpack import cli
+
+
+def count_lines(fname: str) -> int:
+    if shutil.which("wc"):
+        return int(
+            subprocess.run(["wc", "-l", fname], capture_output=True, text=True)
+            .stdout.strip()
+            .split(maxsplit=2)[0]
+        )
+    else:
+        with open(fname, mode="r") as f:
+            return len(f.readlines())
 
 
 # fmt: off
@@ -33,18 +47,20 @@ def sampling_corpus(
 ):
     """Sampling lines from corpus."""
 
-    with open(input_prefix + "." + suffixes[0], mode="r") as f_in:
-        num_sentences = len(f_in.readlines())
+    fname = input_prefix + "." + suffixes[0]
+    num_sentences = count_lines(fname)
 
     np.random.seed(seed)
     size = min(sampling_size, num_sentences)
-    sampler = np.random.permutation(num_sentences)[:size]
+    sample_ids = np.random.permutation(num_sentences)[:size].tolist()
     for suffix in suffixes:
+        samples: Dict[int, str] = dict.fromkeys(sample_ids)
         with open(input_prefix + "." + suffix, mode="r") as f_in:
-            with open(output_prefix + "." + suffix, mode="w") as f_out:
-                lines = f_in.readlines()
-                samples = [lines[i] for i in sampler]
-                f_out.writelines(samples)
+            for i, line in enumerate(f_in):
+                if i in samples:
+                    samples[i] = line
+        with open(output_prefix + "." + suffix, mode="w") as f_out:
+            f_out.writelines(samples.values())
 
 
 if __name__ == "__main__":
