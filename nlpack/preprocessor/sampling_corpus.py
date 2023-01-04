@@ -6,6 +6,7 @@
 
 import shutil
 import subprocess
+from io import TextIOWrapper
 from typing import Dict, List, Set
 
 import numpy as np
@@ -25,6 +26,27 @@ def count_lines(fname: str) -> int:
             return len(f.readlines())
 
 
+def sample_on_memory(
+    f_in: TextIOWrapper, f_out: TextIOWrapper, sample_ids: List[int]
+) -> None:
+    lines = f_in.readlines()
+    f_out.writelines([lines[i] for i in sample_ids])
+
+
+def sample_hash(
+    f_in: TextIOWrapper, f_out: TextIOWrapper, sample_ids: List[int]
+) -> None:
+    samples: Dict[int, str] = dict.fromkeys(sample_ids)
+    unseen: Set[int] = set(sample_ids)
+    for i, line in enumerate(f_in):
+        if i in unseen:
+            samples[i] = line
+            unseen.remove(i)
+            if len(unseen) == 0:
+                break
+    f_out.writelines(samples.values())
+
+
 # fmt: off
 @cli.subcommand("sampling-corpus")
 @cli.option("--input-prefix", "-i", type=str, metavar="PREFIX", required=True,
@@ -35,6 +57,8 @@ def count_lines(fname: str) -> int:
             help="File suffixes.")
 @cli.option("--sampling-size", "-n", type=int, metavar="N", required=True,
             help="Sampling size.")
+@cli.option("--on-memory", is_flag=True,
+            help="Load all data on memory.")
 @cli.option("--seed", type=int, metavar="N", default=0,
             help="Random seed.")
 # fmt: on
@@ -43,6 +67,7 @@ def sampling_corpus(
     output_prefix: str,
     suffixes: List[str],
     sampling_size: int,
+    on_memory: bool = False,
     seed: int = 0,
 ):
     """Sampling lines from corpus."""
@@ -54,18 +79,12 @@ def sampling_corpus(
     size = min(sampling_size, num_sentences)
     sample_ids = np.random.permutation(num_sentences)[:size].tolist()
     for suffix in suffixes:
-        samples: Dict[int, str] = dict.fromkeys(sample_ids)
-        unseen: Set[int] = set(sample_ids)
         with open(input_prefix + "." + suffix, mode="r") as f_in:
-            for i, line in enumerate(f_in):
-                if i in unseen:
-                    samples[i] = line
-                    unseen.remove(i)
-                    if len(unseen) == 0:
-                        break
-
-        with open(output_prefix + "." + suffix, mode="w") as f_out:
-            f_out.writelines(samples.values())
+            with open(output_prefix + "." + suffix, mode="w") as f_out:
+                if on_memory:
+                    sample_on_memory(f_in, f_out, sample_ids)
+                else:
+                    sample_hash(f_in, f_out, sample_ids)
 
 
 if __name__ == "__main__":
