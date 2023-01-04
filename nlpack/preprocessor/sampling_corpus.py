@@ -61,6 +61,9 @@ def sampling_corpus(
                 if i in unseen:
                     samples[i] = line
                     unseen.remove(i)
+                    if len(unseen) == 0:
+                        break
+
         with open(output_prefix + "." + suffix, mode="w") as f_out:
             f_out.writelines(samples.values())
 
