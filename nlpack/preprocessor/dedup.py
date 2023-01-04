@@ -29,6 +29,12 @@ def dedup(input_prefix: str, output_prefix: str, suffixes: List[str]):
     for suffix, lines_f in zip(suffixes, zip(*union_lines)):
         with open(output_prefix + "." + suffix, mode="w") as f_out:
             f_out.writelines(lines_f)
+    cli.echo(
+        "input sentences: {:,}, output sentences: {:,}".format(
+            len(lines[0]), len(union_lines)
+        ),
+        err=True,
+    )
 
 
 if __name__ == "__main__":
