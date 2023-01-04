@@ -57,7 +57,7 @@ def sample_hash(
             help="File suffixes.")
 @cli.option("--sampling-size", "-n", type=int, metavar="N", required=True,
             help="Sampling size.")
-@cli.option("--on-memory", is_flag=True,
+@cli.option("--on-memory", "-m", is_flag=True,
             help="Load all data on memory.")
 @cli.option("--seed", type=int, metavar="N", default=0,
             help="Random seed.")
