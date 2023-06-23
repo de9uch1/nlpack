@@ -4,12 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import concurrent.futures
 import fileinput
 import os
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
-from multiprocessing import Pool
 from typing import Counter, List, Union
 
 from nlpack import cli, utils
@@ -40,7 +40,7 @@ class CorpusStats:
         seq_len = len(line)
         self.num_tokens += seq_len
         self.histogram[seq_len // histogram_width] += 1
-        self.sqrd_num_tokens += seq_len ** 2
+        self.sqrd_num_tokens += seq_len**2
 
         if seq_len > self.max_len:
             self.max_len_ids = [sent_id]
@@ -86,47 +86,38 @@ class CorpusStats:
 # fmt: off
 @cli.subcommand("corpus-stats")
 @cli.argument("input", type=str, default="-", metavar="FILE")
-@cli.option("--histogram-width", "-w", type=int, default=30, metavar="N",
+@cli.option("--histogram-width", "-w", type=int, default=10, metavar="N",
             help="Histogram width.")
-@cli.option("--buffer-size", "-b", type=int, default=100000, metavar="N",
+@cli.option("--buffer-size", "-b", type=int, default=1000000, metavar="N",
             help="Buffer size.")
-@cli.option_num_workers(short_option="-n")
+@cli.option("--quiet", "-q", is_flag=True,
+            help="No verbose.")
 # fmt: on
-def corpus_stats(input: str, histogram_width: int, buffer_size: int, num_workers: int):
+def corpus_stats(input: str, histogram_width: int, buffer_size: int, quiet: bool):
     """Show the corpus statistics.
 
     If FILE is not given, read from standard input.
     """
 
-    stats = CorpusStats()
-    workers = []
-    with Pool(processes=num_workers) as pool:
+    results = []
+    with concurrent.futures.ProcessPoolExecutor() as executor:
         with fileinput.input(files=[input]) as f:
-            for batch in utils.buffer_lines(
-                f, buffer_size=buffer_size, strip=True, split=True
-            ):
-                workers.append(
-                    pool.apply_async(
-                        CorpusStats.get_stats_batch,
-                        args=(batch, histogram_width),
-                    )
+            for batch in utils.buffer_lines(f, buffer_size=buffer_size, strip=True):
+                results.append(
+                    executor.submit(CorpusStats.get_stats_batch, batch, histogram_width)
                 )
-                if len(workers) >= num_workers:
-                    for res in workers:
-                        stats.merge(res.get())
-                    workers = []
 
-            for res in workers:
-                stats.merge(res.get())
-                workers = []
+    stats = CorpusStats()
+    for res in results:
+        stats.merge(res.result())
 
     assert stats.num_sentences > 0, "No input."
 
     num_tokens_mean = stats.num_tokens / stats.num_sentences
     num_tokens_var = (
         stats.sqrd_num_tokens / stats.num_sentences
-    ) - num_tokens_mean ** 2
-    num_tokens_sd = num_tokens_var ** 0.5
+    ) - num_tokens_mean**2
+    num_tokens_sd = num_tokens_var**0.5
 
     stats_table_title = "Statistics of {}".format(
         os.path.basename(input) if input != "-" else "(standard input)"
@@ -147,8 +138,16 @@ def corpus_stats(input: str, histogram_width: int, buffer_size: int, num_workers
     stats_table.add_row("# of tokens (mean)", f"{num_tokens_mean:.2f}")
     stats_table.add_row("# of tokens (SD)", f"{num_tokens_sd:.2f}")
     stats_table.add_row("# of vocabulary", f"{len(stats.vocab)}")
-    stats_table.add_row("max length", f"{stats.max_len}", f"line: {stats.max_len_ids}")
-    stats_table.add_row("min length", f"{stats.min_len}", f"line: {stats.min_len_ids}")
+    if quiet:
+        stats_table.add_row("max length", f"{stats.max_len}")
+        stats_table.add_row("min length", f"{stats.min_len}")
+    else:
+        stats_table.add_row(
+            "max length", f"{stats.max_len}", f"line: {stats.max_len_ids}"
+        )
+        stats_table.add_row(
+            "min length", f"{stats.min_len}", f"line: {stats.min_len_ids}"
+        )
     cli.rprint(stats_table)
     cli.rprint()
 
