@@ -4,9 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import concurrent.futures
 import os
 import re
-from argparse import ArgumentParser, Namespace
 from typing import List, Optional
 
 import numpy as np
@@ -15,8 +15,7 @@ from sacrebleu.dataset import DATASETS
 from sacrebleu.metrics import BLEU, CHRF, TER
 from sacrebleu.utils import get_reference_files, smart_open
 
-from nlpack import cli, utils
-from nlpack.utils import SentenceBatch
+from nlpack import cli
 
 
 class SentenceWiseScorer:
@@ -37,6 +36,7 @@ class SentenceWiseScorer:
         self.ref = self.read_reference(test_set)
         self.langpair = langpair
         self.scorer = self.build_scorer(metric, lowercase=lowercase, tokenize=tokenize)
+        self.minimize_metric = metric in self.MINIMIZE_METRICS
 
         self.scores = []
         self.sysouts = []
@@ -70,31 +70,26 @@ class SentenceWiseScorer:
         else:
             raise NotImplementedError
 
-    def read_reference(self, test_set: str):
+    def read_reference(self, test_set: str) -> List[str]:
         ref = []
         if os.path.exists(test_set):
             with open(test_set) as f:
                 for line in f:
-                    ref.append(line.strip())
+                    ref.append([line.strip()])
         elif DATASETS.get(test_set, None) is not None:
             assert self.langpair is not None
             ref_file = get_reference_files(test_set, self.langpair)
             for line in smart_open(ref_file):
-                ref.append(line.strip())
+                ref.append([line.strip()])
         return ref
 
-    def sentence_bleu(
-        self,
-        lines: List[str],
-    ):
-        return [
-            self.scorer.sentence_score(line.strip(), [self.ref[i]])
-            for i, line in enumerate(lines)
-        ]
+    def score_sentences(self, lines: List[str]):
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            return list(executor.map(self.scorer.sentence_score, lines, self.ref))
 
-    def add_hypo(self, hypo: List[str]):
-        self.scores.append(self.sentence_bleu(hypo))
-        self.sysouts.append(hypo)
+    def add_hypo(self, hypos: List[str]):
+        self.scores.append(self.score_sentences(hypos))
+        self.sysouts.append(hypos)
 
     def compare_systems(
         self,
@@ -106,7 +101,7 @@ class SentenceWiseScorer:
             sort_indices = np.argsort(
                 [s.score for s in self.scores[sort_score]], kind="mergesort"
             )
-            if self.metric not in self.MINIMIZE_METRICS:
+            if not self.minimize_metric:
                 sort_indices = sort_indices[::-1]
         elif sort_diff is not None:
             sort_indices = np.argsort(
@@ -114,7 +109,7 @@ class SentenceWiseScorer:
                 - np.array([s.score for s in self.scores[0]]),
                 kind="mergesort",
             )
-            if self.metric not in self.MINIMIZE_METRICS:
+            if not self.minimize_metric:
                 sort_indices = sort_indices[::-1]
         else:
             sort_indices = np.arange(len(self.ref))
@@ -146,16 +141,20 @@ class SentenceWiseScorer:
 
                 if len(self.source) != 0:
                     table.add_row("Src", None, self.source[i])
-                ref_i = self.ref[i]
+                ref_i = self.ref[i][0]
                 table.add_row("Ref", None, ref_i)
                 sys0_score = 0.0
                 for sysno, hypo in enumerate(self.sysouts):
                     if sysno == 0:
                         sys0_score = self.scores[sysno][i].score
                     score = self.scores[sysno][i].score
-                    if score > sys0_score:
+                    if (self.minimize_metric and score < sys0_score) or (
+                        not self.minimize_metric and score > sys0_score
+                    ):
                         greaters[sysno][i] = score
-                    elif score < sys0_score:
+                    elif (self.minimize_metric and score > sys0_score) or (
+                        not self.minimize_metric and score < sys0_score
+                    ):
                         lowers[sysno][i] = score
                     else:
                         equals[sysno][i] = score
@@ -163,7 +162,9 @@ class SentenceWiseScorer:
                     gain = score - sys0_score
                     if sysno == 0:
                         score_color = "[default]"
-                    elif gain >= 0:
+                    elif (self.minimize_metric and gain <= 0) or (
+                        not self.minimize_metric and gain >= 0
+                    ):
                         score_color = "[green]"
                     else:
                         score_color = "[red]"
@@ -220,16 +221,20 @@ class SentenceWiseScorer:
         for i in sort_indices:
             if len(self.source) != 0:
                 print("Source-{}\t{}".format(i, self.source[i]))
-            ref_i = self.ref[i]
+            ref_i = self.ref[i][0]
             print("Reference-{}\t{}".format(i, ref_i))
             sys0_score = 0.0
             for sysno, hypo in enumerate(self.sysouts):
                 if sysno == 0:
                     sys0_score = self.scores[sysno][i].score
                 score = self.scores[sysno][i].score
-                if score > sys0_score:
+                if (self.minimize_metric and score < sys0_score) or (
+                    not self.minimize_metric and score > sys0_score
+                ):
                     greaters[sysno][i] = score
-                elif score < sys0_score:
+                elif (self.minimize_metric and score > sys0_score) or (
+                    not self.minimize_metric and score < sys0_score
+                ):
                     lowers[sysno][i] = score
                 else:
                     equals[sysno][i] = score
