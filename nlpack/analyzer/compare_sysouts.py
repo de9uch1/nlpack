@@ -22,6 +22,7 @@ from nlpack.utils import SentenceBatch
 class SentenceWiseScorer:
 
     TAG_PATTERN = re.compile(r"^<(.+)>$")
+    MINIMIZE_METRICS = {"ter"}
 
     def __init__(
         self,
@@ -104,13 +105,17 @@ class SentenceWiseScorer:
         if sort_score is not None:
             sort_indices = np.argsort(
                 [s.score for s in self.scores[sort_score]], kind="mergesort"
-            )[::-1]
+            )
+            if self.metric not in self.MINIMIZE_METRICS:
+                sort_indices = sort_indices[::-1]
         elif sort_diff is not None:
             sort_indices = np.argsort(
                 np.array([s.score for s in self.scores[sort_diff]])
                 - np.array([s.score for s in self.scores[0]]),
                 kind="mergesort",
-            )[::-1]
+            )
+            if self.metric not in self.MINIMIZE_METRICS:
+                sort_indices = sort_indices[::-1]
         else:
             sort_indices = np.arange(len(self.ref))
 
