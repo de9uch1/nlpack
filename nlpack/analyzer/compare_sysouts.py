@@ -160,10 +160,10 @@ class SentenceWiseScorer:
                         equals[sysno][i] = score
 
                     gain = score - sys0_score
-                    if sysno == 0:
+                    if sysno == 0 or gain == 0.0:
                         score_color = "[default]"
-                    elif (self.minimize_metric and gain <= 0) or (
-                        not self.minimize_metric and gain >= 0
+                    elif (self.minimize_metric and gain < 0.0) or (
+                        not self.minimize_metric and gain > 0.0
                     ):
                         score_color = "[green]"
                     else:
