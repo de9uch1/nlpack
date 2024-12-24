@@ -8,9 +8,8 @@ import concurrent.futures
 import fileinput
 import os
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from typing import Counter, List, Union
 
 from nlpack import cli, utils
 from nlpack.utils import SentenceBatch
@@ -23,21 +22,18 @@ class CorpusStats:
     sqrd_num_tokens: int = 0
     vocab: Counter = field(default_factory=Counter)
     max_len: int = 0
-    max_len_ids: List[int] = field(default_factory=list)
+    max_len_ids: list[int] = field(default_factory=list)
     min_len: int = sys.maxsize
-    min_len_ids: List[int] = field(default_factory=list)
+    min_len_ids: list[int] = field(default_factory=list)
     histogram: defaultdict = field(default_factory=lambda: defaultdict(int))
 
-    def get_stats(
-        self, sent_id: int, line: Union[str, List[str]], histogram_width: int = 50
-    ):
-        if isinstance(line, str):
-            line = line.split()
+    def get_stats(self, sent_id: int, line: str, histogram_width: int = 50):
+        tokens = line.split()
 
         self.num_sentences += 1
-        self.vocab.update(line)
+        self.vocab.update(tokens)
 
-        seq_len = len(line)
+        seq_len = len(tokens)
         self.num_tokens += seq_len
         self.histogram[seq_len // histogram_width] += 1
         self.sqrd_num_tokens += seq_len**2
@@ -92,8 +88,10 @@ class CorpusStats:
             help="Buffer size.")
 @cli.option("--quiet", "-q", is_flag=True,
             help="No verbose.")
+@cli.option("--jsonl-key", type=str, default=None, metavar="KEY",
+            help="Read lines as JSONL.")
 # fmt: on
-def corpus_stats(input: str, histogram_width: int, buffer_size: int, quiet: bool):
+def corpus_stats(input: str, histogram_width: int, buffer_size: int, quiet: bool, jsonl_key: str | None):
     """Show the corpus statistics.
 
     If FILE is not given, read from standard input.
@@ -102,7 +100,7 @@ def corpus_stats(input: str, histogram_width: int, buffer_size: int, quiet: bool
     results = []
     with concurrent.futures.ProcessPoolExecutor() as executor:
         with fileinput.input(files=[input]) as f:
-            for batch in utils.buffer_lines(f, buffer_size=buffer_size, strip=True):
+            for batch in utils.buffer_lines(f, buffer_size=buffer_size, jsonl_key=jsonl_key):
                 results.append(
                     executor.submit(CorpusStats.get_stats_batch, batch, histogram_width)
                 )
